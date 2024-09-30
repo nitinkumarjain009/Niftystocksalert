@@ -22,7 +22,7 @@ Setup and Usage
 Clone the repository:
 bash
 Copy code
-git clone https://github.com/yourusername/stock-signal-bot.git
+git clone https://github.com/ThoriDay/Stock-Trading-Signal-Bot-for-Nifty-500-Stocks.git
 Install the required dependencies:
 bash
 Copy code
