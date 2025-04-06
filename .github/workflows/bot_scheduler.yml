@@ -5,7 +5,7 @@ on:
     - cron: '*/30 * * * *' # Runs every 30 minutes
   push:
     branches:
-      - main
+      - main # Runs on push to main branch
 
 jobs:
   run_bot_and_notebook:
@@ -18,7 +18,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.10' # Consider pinning minor version
+          python-version: '3.10' # Pin a specific minor version for consistency
 
       - name: Install base dependencies
         run: |
@@ -36,14 +36,14 @@ jobs:
           wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
           tar -xzvf ta-lib-0.4.0-src.tar.gz
           cd ta-lib/
-          ./configure --prefix=/usr/local
+          ./configure --prefix=/usr/local # Standard installation location
           make
-          sudo make install
+          sudo make install # Install requires sudo for /usr/local
           # Set TA_LIB_DIR for subsequent steps using the installation prefix
           echo "TA_LIB_DIR=/usr/local" >> $GITHUB_ENV
           cd ..
           rm -rf ta-lib ta-lib-0.4.0-src.tar.gz
-        # Removed continue-on-error: true - Fail if C library install fails
+        # No continue-on-error: Fail fast if C library install fails
 
       - name: Install TA-Lib Python wrapper
         # TA_LIB_DIR=/usr/local is inherited from the previous step via $GITHUB_ENV
@@ -52,25 +52,27 @@ jobs:
         run: |
           export TA_INCLUDE_PATH="${{ env.TA_LIB_DIR }}/include"
           export TA_LIBRARY_PATH="${{ env.TA_LIB_DIR }}/lib"
-          # Verify paths exist (optional debug)
+          # Optional: Verify paths exist before installing pip package (useful for debugging)
           echo "Using TA_INCLUDE_PATH=${TA_INCLUDE_PATH}"
           echo "Using TA_LIBRARY_PATH=${TA_LIBRARY_PATH}"
-          ls -l $TA_INCLUDE_PATH/ta-lib/ta_defs.h || echo "Header not found!"
-          ls -l $TA_LIBRARY_PATH/libta_lib.so* || echo "Library not found!"
+          ls -l $TA_INCLUDE_PATH/ta-lib/ta_defs.h || echo "WARN: Header file not found where expected!"
+          ls -l $TA_LIBRARY_PATH/libta_lib.so* || echo "WARN: Shared library not found where expected!"
+          # Install the Python wrapper, ensuring it finds the C library
           pip install TA-Lib --no-cache-dir --verbose
-        # Removed env: TA_LIB_PATH: "" - THIS WAS THE MAIN PROBLEM
-        # Removed continue-on-error: true - Fail if wrapper install fails
+        # No continue-on-error: Fail fast if Python wrapper install fails
 
       - name: Verify TA-Lib Python Import (Optional but recommended)
         run: python -c "import talib; print(f'TA-Lib version: {talib.__version__}')"
+        # No continue-on-error: Fail if import fails, indicating installation issue
 
       - name: Run Price Action Notebook
         run: |
           jupyter nbconvert --execute PRICEACTION.ipynb --to notebook --output executed_PRICEACTION.ipynb
-        # Removed continue-on-error: true - Fail if notebook fails (assuming bot depends on it)
+        # No continue-on-error: Fail if notebook execution fails (adjust if independent execution is okay)
 
       - name: Run the bot
         env:
+          # Ensure these secrets are configured in your GitHub repository settings
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python bot.py
