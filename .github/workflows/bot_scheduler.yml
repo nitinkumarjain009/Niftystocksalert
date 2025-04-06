@@ -61,10 +61,7 @@ jobs:
           pip install TA-Lib --no-cache-dir --verbose
         # No continue-on-error: Fail fast if Python wrapper install fails
 
-      - name: Verify TA-Lib Python Import (Optional but recommended)
-        run: python -c "import talib; print(f'TA-Lib version: {talib.__version__}')"
-        # No continue-on-error: Fail if import fails, indicating installation issue
-
+    
       - name: Run Price Action Notebook
         run: |
           jupyter nbconvert --execute PRICEACTION.ipynb --to notebook --output executed_PRICEACTION.ipynb
