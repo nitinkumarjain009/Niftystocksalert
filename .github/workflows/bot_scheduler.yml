@@ -31,15 +31,21 @@ jobs:
           wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
           tar -xzvf ta-lib-0.4.0-src.tar.gz
           cd ta-lib
-          ./configure
+          ./configure --prefix=/usr/local  # Install to /usr/local
           make
           sudo make install
+          echo "TA_LIB_PATH=/usr/local" >> $GITHUB_ENV
           cd ..
           rm -rf ta-lib ta-lib-0.4.0-src.tar.gz
         continue-on-error: true
 
-      - name: Install TA-Lib Python wrapper
-        run: pip install TA-Lib --no-cache-dir --verbose
+      - name: Install TA-Lib Python wrapper with TA_LIB_PATH
+        run: |
+          export TA_INCLUDE_PATH="$TA_LIB_PATH/include"
+          export TA_LIB_PATH="$TA_LIB_PATH/lib"
+          pip install TA-Lib --no-cache-dir --verbose
+        env:
+          TA_LIB_PATH: "" # Initialize
         continue-on-error: true
 
       - name: Run Price Action Notebook
