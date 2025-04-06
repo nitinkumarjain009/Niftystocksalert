@@ -2,7 +2,7 @@ name: Run Telegram Bot and Price Action Notebook
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '*/30 * * * *' # Runs every 30 minutes
   push:
     branches:
       - main
@@ -18,40 +18,56 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.x'
+          python-version: '3.10' # Consider pinning minor version
 
-      - name: Install dependencies
+      - name: Install base dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install nbconvert ipykernel
+          pip install nbconvert ipykernel # For notebook execution
 
-      - name: Download and Install TA-Lib from Source
+      - name: Install system dependencies for TA-Lib build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential wget # Ensure build tools are present
+
+      - name: Download and Install TA-Lib C Library
         run: |
           wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
           tar -xzvf ta-lib-0.4.0-src.tar.gz
-          cd ta-lib
-          ./configure --prefix=/usr/local  # Install to /usr/local
+          cd ta-lib/
+          ./configure --prefix=/usr/local
           make
           sudo make install
-          echo "TA_LIB_PATH=/usr/local" >> $GITHUB_ENV
+          # Set TA_LIB_DIR for subsequent steps using the installation prefix
+          echo "TA_LIB_DIR=/usr/local" >> $GITHUB_ENV
           cd ..
           rm -rf ta-lib ta-lib-0.4.0-src.tar.gz
-        continue-on-error: true
+        # Removed continue-on-error: true - Fail if C library install fails
 
-      - name: Install TA-Lib Python wrapper with TA_LIB_PATH
+      - name: Install TA-Lib Python wrapper
+        # TA_LIB_DIR=/usr/local is inherited from the previous step via $GITHUB_ENV
+        # The TA-Lib pip package setup script often checks TA_LIBRARY_PATH and TA_INCLUDE_PATH
+        # Setting these explicitly based on TA_LIB_DIR is robust.
         run: |
-          export TA_INCLUDE_PATH="$TA_LIB_PATH/include"
-          export TA_LIB_PATH="$TA_LIB_PATH/lib"
+          export TA_INCLUDE_PATH="${{ env.TA_LIB_DIR }}/include"
+          export TA_LIBRARY_PATH="${{ env.TA_LIB_DIR }}/lib"
+          # Verify paths exist (optional debug)
+          echo "Using TA_INCLUDE_PATH=${TA_INCLUDE_PATH}"
+          echo "Using TA_LIBRARY_PATH=${TA_LIBRARY_PATH}"
+          ls -l $TA_INCLUDE_PATH/ta-lib/ta_defs.h || echo "Header not found!"
+          ls -l $TA_LIBRARY_PATH/libta_lib.so* || echo "Library not found!"
           pip install TA-Lib --no-cache-dir --verbose
-        env:
-          TA_LIB_PATH: "" # Initialize
-        continue-on-error: true
+        # Removed env: TA_LIB_PATH: "" - THIS WAS THE MAIN PROBLEM
+        # Removed continue-on-error: true - Fail if wrapper install fails
+
+      - name: Verify TA-Lib Python Import (Optional but recommended)
+        run: python -c "import talib; print(f'TA-Lib version: {talib.__version__}')"
 
       - name: Run Price Action Notebook
         run: |
           jupyter nbconvert --execute PRICEACTION.ipynb --to notebook --output executed_PRICEACTION.ipynb
-        continue-on-error: true
+        # Removed continue-on-error: true - Fail if notebook fails (assuming bot depends on it)
 
       - name: Run the bot
         env:
