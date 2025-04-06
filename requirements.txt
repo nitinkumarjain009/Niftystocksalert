@@ -1,0 +1,9 @@
+requests
+yfinance
+nsetools
+TA-Lib  # Note: Requires separate system-level installation
+pandas
+numpy
+apscheduler
+pytz
+python-telegram-bot
