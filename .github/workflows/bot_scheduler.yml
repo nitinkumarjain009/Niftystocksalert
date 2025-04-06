@@ -3,7 +3,7 @@ name: Run Telegram Bot
 on:
   schedule:
     # Run every 30 minutes
-    - cron: '*/30 * * * *'
+    - cron: '*/1 * * * *'
 
 jobs:
   run_bot:
