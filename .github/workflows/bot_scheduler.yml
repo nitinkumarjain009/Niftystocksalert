@@ -2,11 +2,10 @@ name: Run Telegram Bot and Price Action Notebook
 
 on:
   schedule:
-    # Run every 30 minutes
     - cron: '*/30 * * * *'
   push:
     branches:
-      - main  # Replace with your default branch if different
+      - main
 
 jobs:
   run_bot_and_notebook:
@@ -27,11 +26,12 @@ jobs:
           pip install -r requirements.txt
           pip install nbconvert ipykernel
 
-      - name: Set up TA-Lib (Linux - adjust if needed)
+      - name: Install TA-Lib system dependencies and Python wrapper
         run: |
           sudo apt-get update
           sudo apt-get install -y libta-lib-dev
           pip install TA-Lib
+        continue-on-error: true # Keep this for now to see if other parts run
 
       - name: Run Price Action Notebook
         run: |
