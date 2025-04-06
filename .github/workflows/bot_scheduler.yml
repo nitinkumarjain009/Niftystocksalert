@@ -26,22 +26,20 @@ jobs:
           pip install -r requirements.txt
           pip install nbconvert ipykernel
 
-      - name: Install TA-Lib system dependencies
+      - name: Download and Install TA-Lib from Source
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libta-lib-dev
+          wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
+          tar -xzvf ta-lib-0.4.0-src.tar.gz
+          cd ta-lib
+          ./configure
+          make
+          sudo make install
+          cd ..
+          rm -rf ta-lib ta-lib-0.4.0-src.tar.gz
+        continue-on-error: true
 
-      - name: Debug TA-Lib include paths
-        run: |
-          echo "Checking /usr/include/ta-lib"
-          ls -l /usr/include/ta-lib || true
-          echo "Checking /usr/local/include/ta-lib"
-          ls -l /usr/local/include/ta-lib || true
-
-      - name: Install TA-Lib Python wrapper with explicit include path
-        run: |
-          pip install TA-Lib --global-option=build_ext --global-option="-I/usr/include" || \
-          pip install TA-Lib --global-option=build_ext --global-option="-I/usr/local/include"
+      - name: Install TA-Lib Python wrapper
+        run: pip install TA-Lib --no-cache-dir --verbose
         continue-on-error: true
 
       - name: Run Price Action Notebook
