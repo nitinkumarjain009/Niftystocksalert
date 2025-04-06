@@ -31,19 +31,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libta-lib-dev
 
-      - name: Find TA-Lib include directory (if needed)
+      - name: Debug TA-Lib include paths
         run: |
-          TA_LIB_INCLUDE=$(find /usr /usr/local /opt /opt/local /opt/homebrew -name ta-lib -type d 2>/dev/null)
-          echo "TA_LIB_INCLUDE=${TA_LIB_INCLUDE}"
-          if [ -n "$TA_LIB_INCLUDE" ]; then
-            echo "TA_LIB_INCLUDE_PATH=${TA_LIB_INCLUDE}" >> $GITHUB_ENV
-          fi
+          echo "Checking /usr/include/ta-lib"
+          ls -l /usr/include/ta-lib || true
+          echo "Checking /usr/local/include/ta-lib"
+          ls -l /usr/local/include/ta-lib || true
 
-      - name: Install TA-Lib Python wrapper with include path
+      - name: Install TA-Lib Python wrapper with explicit include path
         run: |
-          pip install TA-Lib --global-option=build_ext --global-option="-I$TA_LIB_INCLUDE_PATH/include"
-        env:
-          TA_LIB_INCLUDE_PATH: "" # Initialize in case find doesn't find it
+          pip install TA-Lib --global-option=build_ext --global-option="-I/usr/include" || \
+          pip install TA-Lib --global-option=build_ext --global-option="-I/usr/local/include"
         continue-on-error: true
 
       - name: Run Price Action Notebook
