@@ -20,56 +20,34 @@ jobs:
         with:
           python-version: '3.10' # Pin a specific minor version for consistency
 
-      - name: Install base dependencies
+      - name: Install base Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install nbconvert ipykernel # For notebook execution
 
-      - name: Install system dependencies for TA-Lib build
+      # --- Install TA-Lib C Library using apt ---
+      - name: Install TA-Lib C library development package
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential wget # Ensure build tools are present
+          sudo apt-get install -y libta-lib-dev # Install the dev package
 
-      - name: Download and Install TA-Lib C Library
-        run: |
-          wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
-          tar -xzvf ta-lib-0.4.0-src.tar.gz
-          cd ta-lib/
-          ./configure --prefix=/usr/local # Standard installation location
-          make
-          sudo make install # Install requires sudo for /usr/local
-          # Set TA_LIB_DIR for subsequent steps using the installation prefix
-          echo "TA_LIB_DIR=/usr/local" >> $GITHUB_ENV
-          cd ..
-          rm -rf ta-lib ta-lib-0.4.0-src.tar.gz
-        # No continue-on-error: Fail fast if C library install fails
-
+      # --- Install TA-Lib Python wrapper ---
       - name: Install TA-Lib Python wrapper
-        # TA_LIB_DIR=/usr/local is inherited from the previous step via $GITHUB_ENV
-        # The TA-Lib pip package setup script often checks TA_LIBRARY_PATH and TA_INCLUDE_PATH
-        # Setting these explicitly based on TA_LIB_DIR is robust.
+        # No need to set TA_INCLUDE_PATH or TA_LIBRARY_PATH
+        # pip install should now find the C library in standard system locations
         run: |
-          export TA_INCLUDE_PATH="${{ env.TA_LIB_DIR }}/include"
-          export TA_LIBRARY_PATH="${{ env.TA_LIB_DIR }}/lib"
-          # Optional: Verify paths exist before installing pip package (useful for debugging)
-          echo "Using TA_INCLUDE_PATH=${TA_INCLUDE_PATH}"
-          echo "Using TA_LIBRARY_PATH=${TA_LIBRARY_PATH}"
-          ls -l $TA_INCLUDE_PATH/ta-lib/ta_defs.h || echo "WARN: Header file not found where expected!"
-          ls -l $TA_LIBRARY_PATH/libta_lib.so* || echo "WARN: Shared library not found where expected!"
-          # Install the Python wrapper, ensuring it finds the C library
           pip install TA-Lib --no-cache-dir --verbose
-        # No continue-on-error: Fail fast if Python wrapper install fails
 
-    
+      - name: Verify TA-Lib Python Import (Optional but recommended)
+        run: python -c "import talib; print(f'TA-Lib version: {talib.__version__}')"
+
       - name: Run Price Action Notebook
         run: |
           jupyter nbconvert --execute PRICEACTION.ipynb --to notebook --output executed_PRICEACTION.ipynb
-        # No continue-on-error: Fail if notebook execution fails (adjust if independent execution is okay)
 
       - name: Run the bot
         env:
-          # Ensure these secrets are configured in your GitHub repository settings
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python bot.py
