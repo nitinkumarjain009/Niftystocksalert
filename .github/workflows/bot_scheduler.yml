@@ -9,26 +9,37 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+      
       - name: Set up Python
         uses: actions/setup-python@v3
         with:
           python-version: '3.x'
+      
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install nbconvert ipykernel  # Add nbconvert and ipykernel
-      - name: Set up TA-Lib (Linux - adjust if needed)
+          pip install nbconvert ipykernel
+      
+      - name: Set up TA-Lib
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libta-lib-dev
+          wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
+          tar -xzf ta-lib-0.4.0-src.tar.gz
+          cd ta-lib/
+          ./configure --prefix=/usr
+          make
+          sudo make install
           pip install TA-Lib
+      
       - name: Check TA-Lib installation
-        run: python -c "import talib; print(f'TA-Lib version: {talib.__version__}')"
+        run: |
+          python -c "import talib; print('TA-Lib successfully imported')"
+      
       - name: Run Price Action Notebook
         run: |
           jupyter nbconvert --execute PRICEACTION.ipynb --to notebook --output executed_PRICEACTION.ipynb
-        continue-on-error: true # Allows the workflow to continue even if the notebook fails
+        continue-on-error: true
+      
       - name: Run the bot
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
